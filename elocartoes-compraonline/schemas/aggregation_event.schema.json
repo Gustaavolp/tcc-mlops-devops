@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FraudAggregationEvent",
+  "description": "Evento mínimo publicado pelo endpoint de inferência para alimentar agregações online (feature store). Não contém PII em claro.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "event_name": {
+      "type": "string",
+      "const": "fraud_aggregation_event"
+    },
+    "event_version": {
+      "type": "string",
+      "pattern": "^v\\d+\\.\\d+\\.\\d+$",
+      "description": "Versão do contrato do evento (ex.: v1.0.0)",
+      "default": "v1.0.0"
+    },
+    "transaction_id": {
+      "type": "string",
+      "description": "ID único da transação (mesmo do request)",
+      "minLength": 36,
+      "maxLength": 36,
+      "pattern": "^[\\w.-]{36}$"
+    },
+    "event_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp do evento em ISO UTC (derivado de purchase_date)"
+    },
+    "amount_value": {
+      "type": "number",
+      "description": "Valor normalizado em unidade monetária (amount * 10^-exponent)"
+    },
+    "three_ds_trans_status": {
+      "type": "string",
+      "description": "Status 3DS",
+      "enum": ["Y", "N", "U", "A", "C", "D", "R", "I"]
+    },
+    "device_channel": {
+      "type": "string",
+      "description": "Canal do dispositivo",
+      "enum": ["01", "02", "03"]
+    },
+    "card_hash": {
+      "type": "string",
+      "description": "SHA-256 do PAN com salt (nunca enviar PAN)",
+      "pattern": "^[a-fA-F0-9]{64}$"
+    },
+    "device_hash": {
+      "type": "string",
+      "description": "Fingerprint do dispositivo (hash)"
+    },
+    "email_hash": {
+      "type": "string",
+      "description": "SHA-256 do e-mail (lowercased/trimmed)",
+      "pattern": "^[a-fA-F0-9]{64}$"
+    },
+    "ip_prefix24": {
+      "type": "string",
+      "description": "IPv4 /24 (ex.: 1.2.3.0/24) ou agrupamento IPv6 (ex.: 2001::/48)"
+    },
+    "acquirer_merchant_id": {
+      "type": "string",
+      "maxLength": 35
+    },
+    "merchant_document": {
+      "type": "string",
+      "description": "CNPJ do merchant (14 dígitos)",
+      "pattern": "^\\d{14}$"
+    },
+    "mcc": {
+      "type": "string",
+      "description": "Merchant Category Code",
+      "pattern": "^\\d{4}$"
+    }
+  },
+  "required": [
+    "transaction_id",
+    "event_time",
+    "amount_value"
+  ],
+  "anyOf": [
+    { "required": ["card_hash"] },
+    { "required": ["device_hash"] },
+    { "required": ["email_hash"] },
+    { "required": ["ip_prefix24"] },
+    { "required": ["acquirer_merchant_id"] },
+    { "required": ["merchant_document"] },
+    { "required": ["mcc"] }
+  ]
+}
+

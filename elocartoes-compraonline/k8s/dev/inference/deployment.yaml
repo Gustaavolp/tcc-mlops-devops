@@ -1,0 +1,168 @@
+---
+# ==============================================================================
+# Deployment - Inference Service
+# ==============================================================================
+# Deployment para API de inferência de detecção de fraude
+# Processa requisições de scoring em tempo real com SLA p95 <500ms
+# ==============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inference
+  namespace: fraud-detection
+  labels:
+    app: inference
+    component: api
+    environment: dev
+    version: v1
+  annotations:
+    description: "API de inferência de detecção de fraude em tempo real"
+spec:
+  replicas: 8  # 8 réplicas para 100 RPS com p95 < 500ms (16 workers)
+
+  # Estratégia Rolling update para deploys sem downtime
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+
+  selector:
+    matchLabels:
+      app: inference
+
+  template:
+    metadata:
+      labels:
+        app: inference
+        component: api
+        version: v1
+    spec:
+      # Usa ServiceAccount para permissões AWS (via Node Role)
+      serviceAccountName: inference-service
+
+      # Contexto de segurança
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      # Período de graceful shutdown
+      terminationGracePeriodSeconds: 30
+
+      containers:
+      - name: inference
+        image: 888577064416.dkr.ecr.us-east-1.amazonaws.com/elo-fraud-inference-dev:latest
+        imagePullPolicy: Always
+
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+
+        # Variáveis de ambiente do ConfigMap
+        envFrom:
+        - configMapRef:
+            name: inference-config
+
+        # Variáveis de ambiente adicionais
+        env:
+        # Metadata do pod (para tracing distribuído)
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+
+        # Limites e requests de recursos (dev)
+        # workers=2: cada worker consome ~275Mi RAM e precisa de ~1 vCPU para
+        # XGBoost predict_proba sem contenção. CPU 2000m = 1 vCPU por worker.
+        resources:
+          requests:
+            cpu: "1000m"     # 1 vCPU (request = metade do limit para HPA 50%)
+            memory: "768Mi"  # 768MB RAM (2 workers ~550Mi real)
+          limits:
+            cpu: "2000m"     # 2 vCPU máx (1 por worker)
+            memory: "1536Mi" # 1.5GB RAM máx
+
+        # Liveness probe - reinicia container se não saudável
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+
+        # Readiness probe - remove do service se não pronto
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 2
+
+        # Startup probe - dá tempo para app iniciar antes dos outros probes
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 18  # 180s total (30s delay + 18 * 10s)
+
+        # Hooks de lifecycle para graceful shutdown
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "sleep 5"]
+
+      # Pod affinity - prefere distribuir entre nodes
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - inference
+              topologyKey: kubernetes.io/hostname
+
+        # Node affinity - prefere node group general
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: role
+                operator: In
+                values:
+                - general
+
+      # Tolera taints se houver
+      tolerations: []

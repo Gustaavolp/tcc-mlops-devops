@@ -1,0 +1,10 @@
+boto3
+botocore
+pandas=2.3.3
+numpy=1.26.4
+mlflow=3.9.0
+sagemaker-mlflow=0.2.0
+sagemaker
+pyarrow
+imbalanced-learn=0.14.1
+user-agents=2.2.0

@@ -1,0 +1,45 @@
+# =============================================================================
+# ResourceQuota e LimitRange - Fraud Detection Namespace (STAGING)
+# =============================================================================
+# Limites de recursos para o namespace fraud-detection.
+#
+# NOTA: O Namespace fraud-detection e criado pelo Terraform (platform-k8s/addons.tf).
+# Este arquivo aplica apenas ResourceQuota e LimitRange.
+#
+# Aplicar: kubectl apply -f resource-quota.yaml -n fraud-detection
+# =============================================================================
+
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: fraud-detection-quota
+  namespace: fraud-detection
+spec:
+  hard:
+    requests.cpu: "12"
+    requests.memory: 10Gi
+    limits.cpu: "24"
+    limits.memory: 18Gi
+    pods: "20"
+    services: "10"
+    configmaps: "20"
+    secrets: "20"
+    persistentvolumeclaims: "5"
+---
+# =============================================================================
+# LimitRange - Limites padrao de recursos para pods
+# =============================================================================
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: fraud-detection-limits
+  namespace: fraud-detection
+spec:
+  limits:
+    - default:
+        cpu: "500m"
+        memory: "512Mi"
+      defaultRequest:
+        cpu: "100m"
+        memory: "128Mi"
+      type: Container

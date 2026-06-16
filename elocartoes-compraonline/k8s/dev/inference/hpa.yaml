@@ -1,0 +1,82 @@
+# ==============================================================================
+# HorizontalPodAutoscaler (HPA) - Inference (DEV)
+# ==============================================================================
+# Configuracao de auto-scaling para API de inferencia de deteccao de fraude.
+# Escala baseado em utilizacao de CPU e memoria para lidar com carga variavel.
+#
+# Aplicar: kubectl apply -f hpa.yaml -n fraud-detection
+# ==============================================================================
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: inference-hpa
+  namespace: fraud-detection
+  labels:
+    app: inference
+    component: autoscaling
+    environment: dev
+  annotations:
+    description: "HPA para deployment inference - escala 2-6 replicas baseado em CPU 50% (dev). Memoria removida: workload estatico (~550Mi com workers=2), nao correlaciona com trafego."
+
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: inference
+
+  # Limites de replicas
+  minReplicas: 8
+  maxReplicas: 10
+
+  # ==============================================================================
+  # Configuracao de Metricas
+  # ==============================================================================
+  metrics:
+  # Scaling baseado em CPU (unica metrica relevante para throughput)
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50  # Scale up quando CPU media > 50%
+
+  # ==============================================================================
+  # Comportamento de Scaling
+  # ==============================================================================
+  behavior:
+    # Scale-down: Conservador para evitar thrashing
+    scaleDown:
+      stabilizationWindowSeconds: 300  # 5 min stabilization
+
+      policies:
+      # Remove maximo 50% dos pods por minuto
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+
+      # OU remove maximo 1 pod por minuto
+      - type: Pods
+        value: 1
+        periodSeconds: 60
+
+      # Usa a politica mais conservadora
+      selectPolicy: Min
+
+    # Scale-up: Agressivo para lidar com picos de trafego
+    scaleUp:
+      stabilizationWindowSeconds: 0  # Scale up imediato
+
+      policies:
+      # Dobra pods por minuto (aumento de 100%)
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+
+      # OU adiciona maximo 2 pods por minuto
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+
+      # Usa a politica mais agressiva
+      selectPolicy: Max

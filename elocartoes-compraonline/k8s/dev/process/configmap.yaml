@@ -1,0 +1,31 @@
+# =============================================================================
+# ConfigMap - Process Service (DEV)
+# =============================================================================
+# Configuracoes para o servico process (consumer SQS).
+# Valores derivados dos recursos de infraestrutura (DynamoDB, SQS, Firehose).
+#
+# Aplicar: kubectl apply -f configmap.yaml -n fraud-detection
+# =============================================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: process-config
+  namespace: fraud-detection
+  labels:
+    app: process
+    component: fraud-detection
+    environment: dev
+    project: elo-fraud
+data:
+  # Configuracao AWS
+  AWS_REGION: "us-east-1"
+
+  # Configuracao SQS
+  SQS_QUEUE_URL: "https://sqs.us-east-1.amazonaws.com/888577064416/elo-fraud-resultset-dev.fifo"
+
+  # Configuracao DynamoDB
+  DYNAMO_TABLE: "elo-fraud-customer-recent-tx-dev"
+
+  # Configuracao Firehose
+  FIREHOSE_STREAM: "elo-fraud-inference-firehose-dev"

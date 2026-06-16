@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FraudResultsetRecord",
+  "description": "Registro persistido pelo endpoint de resultset com request SANITIZADO, score, decisão e metadados para treino futuro.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "transaction_id": {
+      "type": "string",
+      "minLength": 36,
+      "maxLength": 36,
+      "pattern": "^[\\w.-]{36}$"
+    },
+    "inference_timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "model_version": {
+      "type": "string",
+      "pattern": "^v\\d+\\.\\d+\\.\\d+$"
+    },
+    "score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "decision": {
+      "type": "string",
+      "enum": ["APPROVE", "REVIEW", "DENY"]
+    },
+    "request_payload": {
+      "type": "object",
+      "description": "Payload de request SANITIZADO: não inclui PAN/email/telefone em claro.",
+      "additionalProperties": true,
+      "properties": {
+        "card_hash": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+        "enr_card_bin6": { "type": "string", "pattern": "^\\d{6}$" },
+        "enr_card_bin8": { "type": "string", "pattern": "^\\d{8}$" },
+        "email_hash": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" }
+      },
+      "required": ["card_hash"],
+      "not": {
+        "anyOf": [
+          { "required": ["card_number"] },
+          { "required": ["email"] },
+          { "required": ["mobile_phone"] }
+        ]
+      }
+    },
+    "features_snapshot": {
+      "type": "object",
+      "description": "Dicionário de features calculadas no momento da inferência (opcional, recomendado para paridade treino/produção).",
+      "additionalProperties": {
+        "type": ["number", "string", "boolean", "null"]
+      }
+    },
+    "bank_response": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "three_ds": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "trans_status": { "type": "string", "enum": ["Y", "N", "U", "A", "C", "D", "R", "I"] },
+            "trans_status_reason": { "type": "string", "pattern": "^\\d{2}$" },
+            "eci": { "type": "string", "maxLength": 3 }
+          }
+        },
+        "authorization": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "status": { "type": "string" },
+            "response_code": { "type": "string" },
+            "auth_code": { "type": "string" }
+          }
+        },
+        "additional_info": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "labels": {
+      "type": "object",
+      "description": "Campos opcionais para rotulagem tardia (chargeback, perda)",
+      "additionalProperties": false,
+      "properties": {
+        "chargeback_indicator": { "type": "boolean" },
+        "chargeback_date": { "type": "string", "format": "date-time" },
+        "loss_amount": { "type": "number" }
+      }
+    },
+    "trace": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "trace_id": { "type": "string" },
+        "environment": { "type": "string", "enum": ["dev", "staging", "prod"] },
+        "latency_ms": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "required": [
+    "transaction_id",
+    "inference_timestamp",
+    "model_version",
+    "score",
+    "decision",
+    "request_payload"
+  ]
+}
+

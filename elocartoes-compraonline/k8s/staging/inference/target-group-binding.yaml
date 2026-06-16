@@ -1,0 +1,27 @@
+# =============================================================================
+# TargetGroupBinding - Inference Service (STAGING)
+# =============================================================================
+# Conecta o Service K8s ao Target Group do NLB criado pelo Terraform.
+# O AWS Load Balancer Controller gerencia o registro dos pods automaticamente.
+#
+# Fluxo: API Gateway -> VPC Link -> NLB -> Target Group -> Pod (porta 8000)
+#
+# Aplicar: kubectl apply -f target-group-binding.yaml -n fraud-detection
+# =============================================================================
+
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: inference-tgb
+  namespace: fraud-detection
+  labels:
+    app: inference
+    component: target-group-binding
+    environment: staging
+    project: elo-fraud
+spec:
+  serviceRef:
+    name: inference
+    port: 8000
+  targetGroupARN: arn:aws:elasticloadbalancing:sa-east-1:888577064416:targetgroup/PLACEHOLDER/PLACEHOLDER
+  targetType: ip

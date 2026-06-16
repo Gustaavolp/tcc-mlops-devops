@@ -1,0 +1,4 @@
+boto3
+python-dotenv
+mlflow==3.4.0
+sagemaker-mlflow

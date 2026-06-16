@@ -1,0 +1,23 @@
+{
+  "transaction_id": "40cd82fb-c145-4df6-9775-467b7b3d02cb",
+  "score": 0.73,
+  "risk_band": "HIGH",
+  "recommendation": "REVIEW",
+  "model_version": "v1.0.0",
+  "timestamp": "2025-10-08T18:02:02Z",
+  "latency_ms": 180,
+  "trace_id": "326080a3-588d-4baf-8804-c9fe3a083516",
+  "reason_codes": [
+    {
+      "code": "ip_risk",
+      "description": "IP com histórico recente",
+      "impact": 0.21
+    },
+    {
+      "code": "mcc",
+      "description": "MCC de risco",
+      "impact": 0.12
+    }
+  ],
+  "environment": "dev"
+}

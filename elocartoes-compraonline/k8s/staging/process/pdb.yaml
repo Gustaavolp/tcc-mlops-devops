@@ -1,0 +1,21 @@
+# =============================================================================
+# PodDisruptionBudget - Process Service (STAGING)
+# =============================================================================
+# Garante alta disponibilidade durante manutencoes planejadas:
+#   - Upgrades do cluster EKS
+#   - Atualizacoes de node groups
+#   - Scaling down de nodes pelo Cluster Autoscaler
+#
+# Aplicar: kubectl apply -f pdb.yaml -n fraud-detection
+# =============================================================================
+
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: process-pdb
+  namespace: fraud-detection
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: process

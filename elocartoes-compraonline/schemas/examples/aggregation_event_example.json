@@ -1,0 +1,16 @@
+{
+  "event_name": "fraud_aggregation_event",
+  "event_version": "v1.0.0",
+  "transaction_id": "123e4567-e89b-12d3-a456-426614174000",
+  "event_time": "2025-01-15T12:34:56Z",
+  "amount_value": 249.90,
+  "three_ds_trans_status": "N",
+  "device_channel": "02",
+  "card_hash": "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae",
+  "email_hash": "4e07408562bedb8b60ce05c1decfe3ad16b72230967de01f640b7e4729b49fce",
+  "ip_prefix24": "179.15.10.0/24",
+  "acquirer_merchant_id": "MRC123456",
+  "merchant_document": "12345678000190",
+  "mcc": "5732"
+}
+

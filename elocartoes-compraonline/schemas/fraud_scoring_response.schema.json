@@ -1,0 +1,192 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FraudScoringResponse",
+  "description": "Resposta do scoring de fraude - para validação com o cliente",
+  "type": "object",
+  "required": [
+    "transaction_id",
+    "score",
+    "risk_band",
+    "recommendation",
+    "model_version",
+    "timestamp",
+    "latency_ms",
+    "trace_id"
+  ],
+  "properties": {
+    "transaction_id": {
+      "type": "string",
+      "description": "ID da transação processada",
+      "maxLength": 36,
+      "minLength": 36
+    },
+    "score": {
+      "type": "number",
+      "description": "Score de fraude entre 0.0 (legítimo) e 1.0 (fraude)",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "example": 0.73
+    },
+    "risk_band": {
+      "type": "string",
+      "description": "Faixa de risco calculada baseada no score",
+      "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+      "example": "HIGH"
+    },
+    "recommendation": {
+      "type": "string",
+      "description": "Recomendação de ação para a transação",
+      "enum": ["APPROVE", "REVIEW", "DECLINE", "CHALLENGE"],
+      "example": "REVIEW"
+    },
+    "reason_codes": {
+      "type": "array",
+      "description": "Top-N features que mais contribuíram para o score (explicabilidade)",
+      "items": {
+        "type": "object",
+        "required": ["code", "description", "impact"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Código da razão (ex: RC01, RC02)",
+            "maxLength": 10,
+            "example": "RC01"
+          },
+          "description": {
+            "type": "string",
+            "description": "Descrição legível da razão",
+            "example": "Múltiplas transações em curto período"
+          },
+          "impact": {
+            "type": "number",
+            "description": "Impacto desta feature no score (SHAP value ou similar)",
+            "minimum": -1.0,
+            "maximum": 1.0,
+            "example": 0.25
+          }
+        }
+      },
+      "maxItems": 5,
+      "minItems": 0
+    },
+    "model_version": {
+      "type": "string",
+      "description": "Versão do modelo utilizado",
+      "pattern": "^v\\d+\\.\\d+\\.\\d+$",
+      "example": "v1.0.0"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp da resposta ISO 8601",
+      "example": "2023-12-15T12:00:00.123Z"
+    },
+    "latency_ms": {
+      "type": "integer",
+      "description": "Latência total da predição em milissegundos",
+      "minimum": 0,
+      "example": 245
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "ID de rastreamento end-to-end (UUID v4)",
+      "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$",
+      "example": "550e8400-e29b-41d4-a716-446655440000"
+    },
+    "model_metadata": {
+      "type": "object",
+      "description": "Metadados do modelo e processamento",
+      "properties": {
+        "features_count": {
+          "type": "integer",
+          "description": "Número de features utilizadas",
+          "example": 42
+        },
+        "enriched_from_history": {
+          "type": "boolean",
+          "description": "Se dados foram enriquecidos do histórico (DynamoDB)",
+          "example": true
+        },
+        "history_transactions_found": {
+          "type": "integer",
+          "description": "Número de transações encontradas no histórico",
+          "minimum": 0,
+          "example": 5
+        }
+      }
+    },
+    "performance_metrics": {
+      "type": "object",
+      "description": "Métricas de performance para SLA monitoring",
+      "properties": {
+        "inference_time_ms": {
+          "type": "integer",
+          "description": "Tempo de inferência no SageMaker",
+          "minimum": 0,
+          "example": 120
+        },
+        "feature_engineering_time_ms": {
+          "type": "integer",
+          "description": "Tempo de engenharia de features",
+          "minimum": 0,
+          "example": 80
+        },
+        "db_lookup_time_ms": {
+          "type": "integer",
+          "description": "Tempo de lookup no DynamoDB",
+          "minimum": 0,
+          "example": 45
+        }
+      }
+    },
+    "environment": {
+      "type": "string",
+      "description": "Ambiente que processou a requisição",
+      "enum": ["dev", "stg", "prd"],
+      "example": "prd"
+    },
+    "warnings": {
+      "type": "array",
+      "description": "Avisos sobre a predição (campos faltantes, fallbacks, etc)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "MISSING_FIELD"
+          },
+          "message": {
+            "type": "string",
+            "example": "Campo 'acct_info.txn_activity_day' não fornecido, usando valor padrão"
+          }
+        }
+      }
+    },
+    "error": {
+      "type": "object",
+      "description": "Informações de erro (apenas se houver falha parcial ou total)",
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "Código do erro",
+          "example": "MODEL_TIMEOUT"
+        },
+        "message": {
+          "type": "string",
+          "description": "Mensagem de erro legível",
+          "example": "Timeout ao chamar SageMaker endpoint"
+        },
+        "detail": {
+          "type": "string",
+          "description": "Detalhes técnicos do erro"
+        },
+        "fallback_applied": {
+          "type": "boolean",
+          "description": "Se um fallback foi aplicado (ex: modelo padrão de regras)",
+          "example": true
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

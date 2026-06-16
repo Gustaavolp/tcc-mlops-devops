@@ -1,0 +1,49 @@
+{
+  "transaction_id": "123e4567-e89b-12d3-a456-426614174000",
+  "inference_timestamp": "2025-01-15T12:34:59Z",
+  "model_version": "v1.0.0",
+  "score": 0.87,
+  "decision": "REVIEW",
+  "request_payload": {
+    "card_hash": "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae",
+    "enr_card_bin6": "506777",
+    "enr_card_bin8": "50677712",
+    "email_hash": "4e07408562bedb8b60ce05c1decfe3ad16b72230967de01f640b7e4729b49fce",
+    "purchase_currency": "986",
+    "purchase_amount": "24990",
+    "purchase_exponent": "2",
+    "purchase_date": "20250115123456",
+    "device_channel": "02",
+    "mcc": "5732",
+    "merchant_country_code": "076",
+    "acquirer_merchant_id": "MRC123456",
+    "billing_address": { "country": "076" },
+    "shipping_address": { "country": "076" }
+  },
+  "features_snapshot": {
+    "f_amount_value": 249.9,
+    "f_amount_log": 5.5255,
+    "f_weekend": false,
+    "f_hour_local": 9,
+    "f_device_channel": "02",
+    "f_mcc": "5732",
+    "enr_email_domain": "example.com"
+  },
+  "bank_response": {
+    "three_ds": {
+      "trans_status": "N",
+      "trans_status_reason": "01",
+      "eci": "05"
+    },
+    "authorization": {
+      "status": "DECLINED",
+      "response_code": "05"
+    }
+  },
+  "trace": {
+    "trace_id": "trace-abc-123",
+    "environment": "staging",
+    "latency_ms": 123
+  }
+}
+

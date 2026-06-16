@@ -1,0 +1,50 @@
+# Enhanced configuration for pipeline testing
+geracao:
+  seed: 20241028
+  volume_total: 50000
+  schema_path: ./online-purchase.yaml
+  output:
+    csv: dataset_pipeline.csv
+    jsonl: payloads_pipeline.jsonl
+
+# Pipeline-specific enhancements
+pipeline_config:
+  temporal_distribution:
+    # Spread transactions across realistic time windows
+    days_back: 90
+    peak_hours: [10, 14, 20]  # Business hours + evening
+    weekend_factor: 0.6
+  
+  feature_engineering_targets:
+    # Ensure key features for ML have good coverage
+    velocity_features:
+      customer_tx_24h: [0, 1, 2, 5, 10, 20]
+      amount_patterns: ["low", "medium", "high", "extreme"]
+    
+    risk_indicators:
+      geo_mismatch_rate: 0.15
+      device_change_rate: 0.08
+      velocity_anomaly_rate: 0.12
+
+# Additional scenarios for edge cases
+cenarios_adicionais:
+  - nome: alta_velocidade
+    peso: 0.02
+    perfil_monetario: padrao
+    campos:
+      # Multiple transactions from same customer
+      customer_velocity: high
+      
+  - nome: geo_anomalia
+    peso: 0.03
+    perfil_monetario: alto_risco
+    campos:
+      # Geographic inconsistencies
+      merchant_country_mismatch: true
+      
+  - nome: dispositivo_novo
+    peso: 0.05
+    perfil_monetario: padrao
+    campos:
+      # New device patterns
+      device_first_seen: true

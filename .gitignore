@@ -1,0 +1,22 @@
+# Credenciais e segredos
+.env
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Terraform cache (regenerável com terraform init)
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfplan
+errored.*
+
+# Node / outros
+node_modules/
+.DS_Store

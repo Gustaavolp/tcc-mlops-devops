@@ -1,0 +1,40 @@
+---
+# ==============================================================================
+# Service - Inference
+# ==============================================================================
+# ClusterIP Service para API de inferência de detecção de fraude
+# Expõe o deployment internamente para roteamento do Ingress
+# ==============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: inference
+  namespace: fraud-detection
+  labels:
+    app: inference
+    component: api
+    environment: dev
+  annotations:
+    description: "Service interno para API de inferência"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
+
+spec:
+  type: ClusterIP
+
+  # Selector do service - corresponde aos pods do deployment
+  selector:
+    app: inference
+
+  # Configuração de portas
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
+
+  # Session affinity para sticky sessions (opcional)
+  sessionAffinity: None
+
+  # Política de tráfego interno
+  internalTrafficPolicy: Cluster

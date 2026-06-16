@@ -1,0 +1,35 @@
+{
+  "transaction_id": "25106288-1649-46c5-a1be-cff46951d01c",
+  "score": 0.5,
+  "risk_band": "MEDIUM",
+  "recommendation": "REVIEW",
+  "model_version": "v0.0.1",
+  "timestamp": "2025-10-08T18:02:02Z",
+  "latency_ms": 480,
+  "trace_id": "e4787b85-3cf1-4e52-81b8-5d81255bf2bb",
+  "reason_codes": [
+    {
+      "code": "ip_risk",
+      "description": "IP com histórico recente",
+      "impact": 0.21
+    },
+    {
+      "code": "mcc",
+      "description": "MCC de risco",
+      "impact": 0.12
+    }
+  ],
+  "environment": "dev",
+  "warnings": [
+    {
+      "code": "MISSING_OPTIONAL",
+      "message": "browser_ip ausente; usando default"
+    }
+  ],
+  "error": {
+    "code": "MODEL_TIMEOUT",
+    "message": "Timeout ao chamar endpoint",
+    "detail": "SageMaker p95 acima do limite",
+    "fallback_applied": true
+  }
+}

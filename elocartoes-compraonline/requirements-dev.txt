@@ -1,0 +1,16 @@
+# Development dependencies
+-r requirements.txt
+
+# Jupyter for notebooks
+jupyter==1.0.0
+jupyterlab==4.0.9
+ipykernel==6.27.1
+matplotlib==3.8.2
+seaborn==0.13.0
+
+# Profiling
+py-spy==0.3.14
+memory-profiler==0.61.0
+
+# Load testing
+locust==2.19.1

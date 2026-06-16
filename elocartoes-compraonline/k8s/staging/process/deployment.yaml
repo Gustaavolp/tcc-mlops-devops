@@ -1,0 +1,135 @@
+---
+# ==============================================================================
+# Deployment - Process Service
+# ==============================================================================
+# Deployment para worker process de detecção de fraude
+# Processa mensagens assíncronas da fila SQS
+# ==============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: process
+  namespace: fraud-detection
+  labels:
+    app: process
+    component: worker
+    environment: staging
+    version: v1
+  annotations:
+    description: "Worker SQS para processamento de resultados de detecção de fraude"
+
+spec:
+  replicas: 2  # 2 replicas para HA e compatibilidade com PDB durante node drain
+
+  # Estratégia Rolling update
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+
+  selector:
+    matchLabels:
+      app: process
+
+  template:
+    metadata:
+      labels:
+        app: process
+        component: worker
+        version: v1
+    spec:
+      # Usa ServiceAccount para permissões AWS (via Node Role)
+      serviceAccountName: process-service
+
+      # Contexto de segurança
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      # Período de graceful shutdown
+      terminationGracePeriodSeconds: 60
+
+      containers:
+      - name: process
+        image: 888577064416.dkr.ecr.sa-east-1.amazonaws.com/elo-fraud-process-staging:latest
+        imagePullPolicy: Always
+
+        # Variáveis de ambiente do ConfigMap
+        envFrom:
+        - configMapRef:
+            name: process-config
+
+        # Variáveis de ambiente adicionais
+        env:
+        # Metadata do pod (para tracing distribuído)
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+
+        # Limites e requests de recursos (ambiente staging)
+        resources:
+          requests:
+            cpu: "100m"      # 0.1 vCPU
+            memory: "256Mi"  # 256MB RAM
+          limits:
+            cpu: "500m"      # 0.5 vCPU máx
+            memory: "512Mi"  # 512MB RAM máx
+
+        # Nota: Health probes removidos para worker em background
+        # O worker não expõe endpoints HTTP e o container
+        # não possui utilitários pgrep/ps para verificação de processo.
+        # O worker reiniciará automaticamente se o processo Python crashar.
+
+        # Hooks de lifecycle para graceful shutdown
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - sleep 10
+
+      # Configuração de pod affinity
+      affinity:
+        # Prefere node group general
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: role
+                operator: In
+                values:
+                - general
+
+        # Distribui pods entre nodes diferentes para HA
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - process
+              topologyKey: kubernetes.io/hostname
+
+      # Tolera taints se houver
+      tolerations: []

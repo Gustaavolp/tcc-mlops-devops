@@ -1,0 +1,280 @@
+geracao:
+  seed: 20241028
+  volume_total: 5000
+  schema_path: ./online-purchase.yaml
+  usuarios:
+    transacoes_min: 10
+    transacoes_max: 30
+  output:
+    csv: dataset_sintetico.csv
+    jsonl: payloads_sinteticos.jsonl
+
+campos_comuns:
+  messageType:
+    fixo: "AReq"
+  messageVersion:
+    fixo: "2.2.0"
+  messageCategory:
+    opcoes:
+      - valor: "01"
+        peso: 0.9
+      - valor: "80"
+        peso: 0.1
+  productType:
+    opcoes:
+      - valor: "ONLINE_PURCHASE"
+        peso: 0.7
+      - valor: "THREE_DS_AND_ONLINE_PURCHASE"
+        peso: 0.25
+      - valor: "THREE_DS"
+        peso: 0.05
+  purchaseCurrency:
+    opcoes:
+      - valor: "986"  # BRL
+        peso: 0.85
+      - valor: "840"  # USD
+        peso: 0.1
+      - valor: "978"  # EUR
+        peso: 0.05
+  purchaseExponent:
+    fixo: "2"
+  merchantCountryCode:
+    opcoes:
+      - valor: "076"
+        peso: 0.9
+      - valor: "840"
+        peso: 0.07
+      - valor: "250"
+        peso: 0.03
+  deviceChannel:
+    opcoes:
+      - valor: "02"  # browser
+        peso: 0.7
+      - valor: "01"  # app
+        peso: 0.25
+      - valor: "03"  # 3DS requestor initiated
+        peso: 0.05
+  threeDSCompInd:
+    fixo: "Y"
+  transType:
+    fixo: "01"
+  browserLanguage:
+    opcoes:
+      - valor: "pt-BR"
+        peso: 0.7
+      - valor: "en-US"
+        peso: 0.2
+      - valor: "es-ES"
+        peso: 0.1
+  browserTZ:
+    opcoes:
+      - valor: "-180"
+        peso: 0.2
+      - valor: "-150"
+        peso: 0.25
+      - valor: "-120"
+        peso: 0.35
+      - valor: "-60"
+        peso: 0.2
+  purchaseInstalData:
+    opcoes:
+      - valor: "01"
+        peso: 0.7
+      - valor: "02"
+        peso: 0.2
+      - valor: "03"
+        peso: 0.1
+
+valores_monetarios:
+  padrao:
+    media: 280.0
+    desvio: 130.0
+    minimo: 15.0
+    maximo: 7500.0
+  recorrencia:
+    media: 120.0
+    desvio: 40.0
+    minimo: 10.0
+    maximo: 1200.0
+  alto_risco:
+    media: 180.0
+    desvio: 160.0
+    minimo: 5.0
+    maximo: 15000.0
+
+campos_obrigatorios:
+  - messageType
+  - messageVersion
+  - messageCategory
+  - messageExtension
+  - productType
+  - purchaseAmount
+  - purchaseCurrency
+  - purchaseExponent
+  - purchaseDate
+  - deviceChannel
+  - threeDSCompInd
+  - threeDSServerTransID
+  - transType
+  - transStatus
+  - eci
+  - cardholderName
+  - cardExpiryDate
+  - cardHolderDocument
+  - acctNumber
+  - browserIP
+  - browserUserAgent
+  - browserLanguage
+  - browserScreenHeight
+  - browserScreenWidth
+  - browserTZ
+  - billAddrLine1
+  - billAddrCity
+  - billAddrState
+  - billAddrCountry
+  - billAddrPostCode
+  - merchantName
+  - merchantCountryCode
+  - merchantDocument
+  - purchaseInstalData
+  - email
+  - fraud_label
+
+rotulo_fraude:
+  campo: fraud_label
+  formato: int
+  probabilidade_padrao: 0.02
+  probabilidades_por_cenario:
+    transacao_aprovada: 0.02
+    autenticacao_com_desafio: 0.05
+    transacao_negada: 0.8
+    compra_recorrente: 0.01
+    tokenizada_app: 0.03
+    marketplace: 0.06
+
+cenarios:
+  - nome: transacao_aprovada
+    peso: 0.6
+    perfil_monetario: padrao
+    campos:
+      transStatus:
+        fixo: "Y"
+      eci:
+        opcoes:
+          - valor: "05"
+            peso: 0.7
+          - valor: "02"
+            peso: 0.3
+      deviceChannel:
+        opcoes:
+          - valor: "02"
+            peso: 0.9
+          - valor: "01"
+            peso: 0.1
+      challengeWindowSize:
+        fixo: "05"
+
+  - nome: autenticacao_com_desafio
+    peso: 0.15
+    perfil_monetario: padrao
+    campos:
+      transStatus:
+        fixo: "Y"
+      eci:
+        opcoes:
+          - valor: "05"
+            peso: 0.5
+          - valor: "02"
+            peso: 0.5
+      deviceChannel:
+        opcoes:
+          - valor: "02"
+            peso: 0.75
+          - valor: "01"
+            peso: 0.25
+      challengeWindowSize:
+        fixo: "04"
+      threeDSRequestorChallengeInd:
+        fixo: "01"
+
+  - nome: transacao_negada
+    peso: 0.1
+    perfil_monetario: alto_risco
+    campos:
+      transStatus:
+        fixo: "N"
+      transStatusReason:
+        opcoes:
+          - valor: "01"
+            peso: 0.5
+          - valor: "05"
+            peso: 0.3
+          - valor: "10"
+            peso: 0.2
+      eci:
+        opcoes:
+          - valor: "07"
+            peso: 0.6
+          - valor: "00"
+            peso: 0.4
+      acctInfo.suspiciousAccActivity:
+        fixo: "01"
+
+  - nome: compra_recorrente
+    peso: 0.1
+    perfil_monetario: recorrencia
+    campos:
+      transStatus:
+        fixo: "Y"
+      eci:
+        opcoes:
+          - valor: "05"
+            peso: 0.8
+          - valor: "02"
+            peso: 0.2
+      threeRIInd:
+        fixo: "01"
+      recurringInd.amountInd:
+        fixo: "01"
+      recurringInd.frequencyInd:
+        fixo: "01"
+
+  - nome: tokenizada_app
+    peso: 0.05
+    perfil_monetario: padrao
+    campos:
+      transStatus:
+        fixo: "Y"
+      eci:
+        opcoes:
+          - valor: "05"
+            peso: 0.6
+          - valor: "02"
+            peso: 0.4
+      deviceChannel:
+        opcoes:
+          - valor: "01"
+            peso: 0.9
+          - valor: "02"
+            peso: 0.1
+      payTokenInd:
+        fixo: true
+
+  - nome: marketplace
+    peso: 0.05
+    perfil_monetario: padrao
+    campos:
+      transStatus:
+        fixo: "Y"
+      eci:
+        opcoes:
+          - valor: "05"
+            peso: 0.6
+          - valor: "02"
+            peso: 0.4
+      multiTransaction:
+        itens_min: 2
+        itens_max: 4
+      sellerInfo:
+        vendedores_min: 1
+        vendedores_max: 3

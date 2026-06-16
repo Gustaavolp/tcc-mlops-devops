@@ -1,0 +1,66 @@
+# ==============================================================================
+# KEDA ScaledObject - Process Service (DEV)
+# ==============================================================================
+# Escala o deployment 'process' baseado no numero de mensagens na fila SQS.
+# Substitui o HPA tradicional por autoscaling event-driven.
+#
+# Configuracao DEV:
+#   - Escala de 2 a 5 pods (minimo 2 para compatibilidade com PDB minAvailable:1)
+#   - +1 pod a cada 30 mensagens na fila (mais responsivo que STAGING)
+#   - Polling interval: 15 segundos
+#
+# Aplicar: kubectl apply -f process-scaledobject.yaml -n fraud-detection
+# ==============================================================================
+
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: process-scaledobject
+  namespace: fraud-detection
+  labels:
+    app: process
+    managed-by: keda
+spec:
+  # Deployment a ser escalado
+  scaleTargetRef:
+    name: process
+
+  # Limites de replicas
+  minReplicaCount: 2  # Minimo 2 para HA e compatibilidade com PDB durante node drain
+  maxReplicaCount: 5
+
+  # Intervalo de polling (segundos)
+  pollingInterval: 15
+
+  # Cooldown antes de scale down (segundos)
+  cooldownPeriod: 60
+
+  # Configuracao avancada de scaling
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 120  # Aguarda 2 min antes de scale down
+          policies:
+            - type: Pods
+              value: 1
+              periodSeconds: 60
+        scaleUp:
+          stabilizationWindowSeconds: 0    # Scale up imediato
+          policies:
+            - type: Pods
+              value: 1                      # DEV: mais conservador
+              periodSeconds: 15
+
+  # Trigger: AWS SQS Queue
+  triggers:
+    - type: aws-sqs-queue
+      metadata:
+        # URL da fila SQS FIFO (resultset = dados TE40 assincronos)
+        queueURL: https://sqs.us-east-1.amazonaws.com/888577064416/elo-fraud-resultset-dev.fifo
+        # Mensagens por pod (escala +1 pod a cada 30 mensagens)
+        queueLength: "30"
+        # Regiao AWS
+        awsRegion: us-east-1
+        # Usar credenciais do operator (via node IAM role)
+        identityOwner: operator

@@ -1,0 +1,32 @@
+# =============================================================================
+# ConfigMap - Inference Service (STAGING)
+# =============================================================================
+# Configuracoes para o servico de inferencia de deteccao de fraude.
+# Valores derivados dos recursos de infraestrutura (DynamoDB, SQS, MLflow).
+#
+# Aplicar: kubectl apply -f configmap.yaml -n fraud-detection
+# =============================================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: inference-config
+  namespace: fraud-detection
+  labels:
+    app: inference
+    component: fraud-detection
+    environment: staging
+    project: elo-fraud
+data:
+  # Configuracao AWS
+  AWS_REGION: "sa-east-1"
+
+  # Configuracao DynamoDB (Feature Store)
+  DYNAMO_TABLE: "elo-fraud-customer-recent-tx-staging"
+
+  # MLflow Model Registry
+  MLFLOW_TRACKING_URI: "arn:aws:sagemaker:sa-east-1:888577064416:mlflow-app/app-PLACEHOLDER"
+  MODEL_NAME: "Felicidade"
+
+  # Configuracao SQS (Logs de Inferencia)
+  SQS_QUEUE_URL: "https://sqs.sa-east-1.amazonaws.com/888577064416/elo-fraud-resultset-staging.fifo"
