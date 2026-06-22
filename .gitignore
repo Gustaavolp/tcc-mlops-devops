@@ -1,22 +1,174 @@
-# Credenciais e segredos
-.env
-*.pem
-*.key
+# =============================================================================
+# .gitignore - Elo Fraud Detection System
+# =============================================================================
 
+# -----------------------------------------------------------------------------
 # Python
+# -----------------------------------------------------------------------------
 __pycache__/
-*.pyc
-*.pyo
-.venv/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
 venv/
+env/
+ENV/
+.venv/
 
-# Terraform cache (regenerável com terraform init)
-.terraform/
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# -----------------------------------------------------------------------------
+# Terraform
+# -----------------------------------------------------------------------------
 *.tfstate
+*.tfstate.*
 *.tfstate.backup
-*.tfplan
-errored.*
+.terraform/
+.terraform.lock.hcl
+.terraform.tfstate.lock.info
+.terraform-version.lock
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+bootstrap-outputs.json
 
-# Node / outros
-node_modules/
+# Terraform plan files
+tfplan
+tfplan-*
+*.tfplan
+*.tfplan.json
+*.plan
+plan.out
+
+# Terraform variable files (podem conter secrets)
+*.auto.tfvars
+*.auto.tfvars.json
+secrets.tfvars
+
+# Terraform CLI config
+.terraformrc
+terraform.rc
+
+# EXCETO: exemplos de tfvars (manter no repo)
+!terraform.tfvars.example
+!*.tfvars.example
+
+# -----------------------------------------------------------------------------
+# AWS
+# -----------------------------------------------------------------------------
+.aws/
+awscliv2.zip
+aws/
+session-manager-plugin/
+
+# -----------------------------------------------------------------------------
+# Secrets and credentials
+# -----------------------------------------------------------------------------
+.env
+.env.local
+.env.*.local
+*.env
+secrets.yaml
+credentials.json
+*.pem
+*.pem.pub
+*.key
+*.crt
+
+# EXCETO: .env.example (manter no repo)
+!.env.example
+
+# -----------------------------------------------------------------------------
+# IDEs and editors
+# -----------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+
+# -----------------------------------------------------------------------------
+# OS
+# -----------------------------------------------------------------------------
 .DS_Store
+Thumbs.db
+
+# -----------------------------------------------------------------------------
+# Docker
+# -----------------------------------------------------------------------------
+Dockerfile.local
+docker-compose.override.yml
+.dockerignore.local
+
+# -----------------------------------------------------------------------------
+# Models and data (binarios pesados)
+# -----------------------------------------------------------------------------
+*.pkl
+*.joblib
+*.h5
+*.onnx
+*.pt
+*.pth
+data/
+datasets/
+*.parquet
+*.json.gz
+
+# -----------------------------------------------------------------------------
+# Logs
+# -----------------------------------------------------------------------------
+*.log
+logs/
+
+# -----------------------------------------------------------------------------
+# Backups and temporary files
+# -----------------------------------------------------------------------------
+backups/
+*.bak
+tmp/
+temp/
+*.tmp
+
+# -----------------------------------------------------------------------------
+# Local scripts (podem conter dados sensiveis)
+# -----------------------------------------------------------------------------
+*.local.sh
+*_local.sh
+
+# -----------------------------------------------------------------------------
+# Dados brutos e resultados gerados localmente (não versionar)
+# -----------------------------------------------------------------------------
+preprocessing/raw_data/
+models/src/res/
