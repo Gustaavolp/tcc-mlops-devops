@@ -2,7 +2,7 @@
 
 Diagrama completo e corrigido da plataforma.  
 Substitui a Figura 1 (Seção 5.2) do artigo atual.  
-Gerado em: 2026-06-22
+Gerado em: 2026-06-22 · Revisado em: 2026-09-11 (correção de Terraform 1.11→1.14, remoção do ALB inexistente e inclusão do HPA da Inferência)
 
 ---
 
@@ -35,9 +35,9 @@ flowchart TB
     subgraph REDE["Camada de Entrada e Rede"]
         direction LR
         GW["Amazon API Gateway\nPOST /v1/authorize-purchase\nx-api-key auth"]
-        NLB["Network Load\nBalancer"]
-        ALB["Application Load\nBalancer"]
-        GW --> NLB --> ALB
+        VPCL["VPC Link"]
+        NLB["Network Load\nBalancer (privado)"]
+        GW --> VPCL --> NLB
     end
 
     %% ================================================================
@@ -45,10 +45,11 @@ flowchart TB
     %% ================================================================
     subgraph EKS_CLUSTER["Amazon EKS 1.32 — namespace: fraud-detection"]
         direction LR
-        INF["Inference Service\nFastAPI · Python 3.12\n8 pods · 2 workers/pod\nSLA: P95 &lt; 500 ms"]
+        INF["Inference Service\nFastAPI · Python 3.12\n8–10 pods · 2 workers/pod\nSLA: P95 &lt; 500 ms"]
         PRC["Process Service\nSQS worker\n2–5 pods (KEDA)"]
     end
 
+    HPA["HPA\nCPU 50% → scale\nmin 8 / max 10"]
     KEDA["KEDA 2.18.3\nSQS depth → scale\n30 msg = +1 pod"]
 
     %% ================================================================
@@ -81,7 +82,7 @@ flowchart TB
     %% ================================================================
     subgraph CICD["Trilha CI/CD"]
         direction LR
-        TF["Terraform 1.11\n5 stacks · 15 módulos"]
+        TF["Terraform 1.14\n5 stacks · 15 módulos\nbackend S3 (lock nativo)"]
         CB["AWS CodeBuild\nbuildspecs declarativos"]
         ECR["Amazon ECR\n6 repositórios"]
     end
@@ -102,7 +103,7 @@ flowchart TB
     %% FLUXO 1 — INFERÊNCIA SÍNCRONA
     %% ================================================================
     Client -->|"HTTPS"| GW
-    ALB --> INF
+    NLB --> INF
     INF <-->|"feature lookup"| DDB
     INF -->|"score (síncrono)"| Client
 
@@ -114,7 +115,11 @@ flowchart TB
     PRC <-->|"atualiza feature store"| DDB
     PRC --> FH -->|"inference_logs/"| S3
 
-    %% KEDA autoscaling
+    %% HPA autoscaling (Inference)
+    INF -.->|"CPU utilization"| HPA
+    HPA -.->|"escala 8–10 pods"| INF
+
+    %% KEDA autoscaling (Process)
     SQS -->|"queue depth"| KEDA
     KEDA -->|"escala 2–5 pods"| PRC
 
@@ -170,10 +175,10 @@ flowchart TB
 ## Descrição detalhada dos fluxos (para legenda no Word)
 
 ### Fluxo 1 — Inferência em Tempo Real (síncrono)
-O emissor envia a transação 3DS via HTTPS para o **Amazon API Gateway**, que roteia pelo **NLB** e **ALB** até o **Inference Service** (FastAPI, 8 pods). O serviço consulta o **DynamoDB** (feature store com transações recentes do cliente), executa o modelo XGBoost (carregado do MLflow na inicialização do pod) e retorna o *score* de fraude de forma síncrona.
+O emissor envia a transação 3DS via HTTPS para o **Amazon API Gateway**, que roteia via **VPC Link** e **NLB** (Network Load Balancer, privado) até o **Inference Service** (FastAPI, 8–10 pods via TargetGroupBinding com alvo do tipo IP — sem uso de Application Load Balancer nesse caminho). O serviço consulta o **DynamoDB** (feature store com transações recentes do cliente), executa o modelo XGBoost (carregado do MLflow na inicialização do pod) e retorna o *score* de fraude de forma síncrona. O escalonamento do Inference Service é feito por um **HPA** (Horizontal Pod Autoscaler) tradicional baseado em utilização de CPU (min 8 / max 10 réplicas, *threshold* de 50%).
 
 ### Fluxo 2 — Processamento Assíncrono e Logging
-Após retornar o *score*, o Inference Service enfileira o resultado na **SQS FIFO**. O **Process Service** (worker, 2–5 pods escalados pelo **KEDA**) consome a fila, atualiza o histórico de transações do cliente no **DynamoDB** e persiste o log de inferência no **Kinesis Firehose**, que os entrega ao **S3** (`inference_logs/`).
+Após retornar o *score*, o Inference Service enfileira o resultado na **SQS FIFO**. O **Process Service** (worker, 2–5 pods escalados pelo **KEDA** com base na profundidade da fila) consome a fila, atualiza o histórico de transações do cliente no **DynamoDB** e persiste o log de inferência no **Kinesis Firehose**, que os entrega ao **S3** (`inference_logs/`). HPA e KEDA são mecanismos distintos: o primeiro escala o serviço síncrono por CPU, o segundo escala o *worker* assíncrono por profundidade de fila.
 
 ### Fluxo 3 — Treinamento Contínuo (CT, event-driven)
 Semanalmente (domingo, 08h UTC), o **AWS Glue** agrega os logs de inferência e gera a zona transformada (Delta Lake). O **EventBridge** detecta a conclusão e aciona a Lambda **etl-delta-filter**, que gera Parquets em `training_zone/`. Um evento S3 aciona a Lambda **training-launcher**, que despacha um **SageMaker Training Job** (XGBoost). Ao concluir, métricas e artefatos são registrados no **MLflow**. Um segundo evento S3 aciona a Lambda **register-best-model**, que compara o F1-score e promove o modelo superior no **MLflow Registry**.
@@ -192,14 +197,14 @@ O **AWS CodeBuild** constrói e publica as imagens Docker dos 6 serviços no **A
 |---------|-------------------|---------------------|
 | Ferramenta CI/CD | Não especificada (mencionava GitHub Actions no texto) | **AWS CodeBuild** com buildspecs declarativos |
 | Pipeline CT | Mostrado como parte do pipeline CI/CD | **Trilha separada**: cadeia event-driven (Glue → EventBridge → 3 Lambdas → SageMaker → MLflow) |
-| Inference pods | Não especificado | **8 pods** (2 workers/pod), sizing para 100 RPS |
+| Inference pods | Não especificado | **8–10 pods** (2 workers/pod), escalados por **HPA** (CPU 50%) |
 | Process pods | Não diferenciado do inference | **Serviço separado** (2–5 pods, KEDA) |
-| KEDA | Mencionado mas sem detalhes | **SQS queue depth**, 30 msg/pod, 2–5 réplicas DEV |
+| Autoscaling | KEDA mencionado sem detalhes, atribuído de forma ambígua ao serviço de inferência | **Dois mecanismos distintos**: HPA (CPU, Inference) e KEDA (SQS queue depth, 30 msg/pod, 2–5 réplicas DEV, Process) |
 | DynamoDB | Mencionado | **Feature store** de transações recentes, consultado pelo inference E atualizado pelo process |
 | MLflow | Mencionado | **SageMaker Managed Tracking Server** — modelo carregado direto (sem SageMaker Endpoint) |
 | Observabilidade Bedrock | Não estava no diagrama | **Trilha completa**: EventBridge → Lambda → Athena/MLflow → Bedrock → S3 |
-| Network path | Genérico | **API Gateway → NLB → ALB → EKS** (cadeia que gerou o problema de keepalive) |
-| IaC | Não representado | **Terraform (5 stacks, 15 módulos) + CodeBuild + ECR** |
+| Network path | Genérico / incluía ALB inexistente | **API Gateway → VPC Link → NLB → EKS** (sem ALB; cadeia que gerou o problema de keepalive) |
+| IaC | Não representado | **Terraform 1.14** (5 stacks, 15 módulos, backend S3 com lock nativo) **+ CodeBuild + ECR** |
 
 ---
 
@@ -215,7 +220,7 @@ flowchart LR
         GW["API Gateway"]
         
         subgraph EKS["EKS 1.32"]
-            INF["Inference\nFastAPI · 8 pods"]
+            INF["Inference\nFastAPI · 8–10 pods"]
             PRC["Process\n2–5 pods"]
         end
 
@@ -223,7 +228,8 @@ flowchart LR
         SQS{{"SQS FIFO"}}
         S3[("S3\nData Lake")]
         MLF[("MLflow\nRegistry")]
-        KEDA["KEDA"]
+        HPA["HPA (CPU)"]
+        KEDA["KEDA (fila)"]
 
         subgraph CT["Treinamento Contínuo"]
             GLUE["Glue ETL"] --> L_ETL["λ etl-delta-filter"] --> L_TRAIN["λ training-launcher"] --> SGM["SageMaker\nXGBoost"] --> L_REG["λ register-best-model"]
@@ -238,6 +244,7 @@ flowchart LR
     INF <--> DDB
     INF -->|score| Client
     INF --> SQS --> PRC --> S3
+    INF -.-> HPA -.-> INF
     SQS --> KEDA --> PRC
     S3 --> CT
     L_REG --> MLF -.->|model| INF

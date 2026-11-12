@@ -35,6 +35,18 @@ O texto original omitia a distinção entre os dois pipelines (CodeBuild para se
 
 ---
 
+## Correção 3 — `diagrama-arquitetura.md` (Figura 1), aplicada em 2026-09-11
+
+**Contexto:** o texto do artigo (Seção 3.3/3.4 e Fluxo 1) já estava correto desde a última revisão (2026-07-04), mas o arquivo-fonte do diagrama (`diagrama-arquitetura.md`), usado para gerar a Figura 1, ainda não tinha recebido a mesma correção. Três problemas foram corrigidos:
+
+1. **Versão do Terraform:** o nó `TF` do diagrama dizia "Terraform 1.11"; o código real (`infra/**/backend.tf`) usa `required_version = "~> 1.14.0"`. Corrigido para "Terraform 1.14".
+2. **ALB inexistente na cadeia de rede:** o diagrama mostrava `API Gateway → NLB → ALB → EKS`. Não existe Application Load Balancer nessa cadeia — verificado em `infra/modules/nlb/main.tf` (único load balancer do projeto, `load_balancer_type = "network"`) e nos `TargetGroupBinding` em `k8s/*/inference/target-group-binding.yaml`, que apontam direto para os pods via NLB (`targetType: ip`). Corrigido para `API Gateway → VPC Link → NLB → EKS`, sem ALB.
+3. **HPA da Inferência ausente:** o diagrama só representava o KEDA (que escala o Process via profundidade de fila SQS), dando a entender que o Inference Service também escalaria por KEDA. Na realidade o Inference Service usa um **HPA tradicional baseado em CPU** (`k8s/*/inference/hpa.yaml`: min 8 / max 10 réplicas, threshold 50%). Adicionado o nó HPA escalando o Inference Service, mantendo o KEDA associado apenas ao Process.
+
+**Motivo:** garantir que a Figura 1 e sua legenda representem fielmente a arquitetura real antes da entrega de desenvolvimento de 2026-09-11 ao orientador.
+
+---
+
 ## Resumo das mudanças por seção
 
 | Seção | Problema | Mudança |
@@ -49,9 +61,9 @@ O texto original omitia a distinção entre os dois pipelines (CodeBuild para se
 ## O que NÃO precisa mudar
 
 - **Seção 2.2 (Objetivos):** A menção a "pipelines de CI/CD/CT" está correta — é terminologia, não ferramenta.
-- **Seção 3.3 (IaC):** A descrição do Terraform está precisa e completa.
+- **Seção 3.3 (IaC):** A descrição do Terraform no corpo do artigo está precisa e completa (Terraform 1.14, backend S3 com lock nativo, sem DynamoDB).
 - **Seção 3.4 (KEDA):** A descrição do KEDA com EKS e SQS está correta e alinhada com a implementação real.
-- **Figura 1 (Diagrama):** O diagrama de arquitetura representa fielmente a solução implementada.
+- **Figura 1 (Diagrama):** Ver Correção 3 abaixo — o arquivo-fonte `diagrama-arquitetura.md` estava desatualizado em relação ao artigo e foi corrigido em 2026-09-11.
 - **Seção 6 (Referências):** As 8 referências estão corretas. Observação: a referência [6] aparece como "KA-RIMIBIUKI" no corpo do texto (seção 3.3) mas como "KARIMIBIUKI" na lista — verificar hifenização na citação.
 
 ---

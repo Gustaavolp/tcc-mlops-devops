@@ -1,0 +1,15 @@
+Boa tarde, Gustavo! Tudo bem?
+
+Fiz uma avaliação detalhada da versão final do seu TCC. O trabalho apresenta um conteúdo técnico muito interessante, principalmente pela integração de MLOps, DevOps e serviços AWS, demonstrando uma aplicação prática dos conhecimentos de Engenharia de Software.
+
+Deixei *25 comentários diretamente no Word*, com os trechos destacados em amarelo, indicando os ajustes necessários tanto no conteúdo quanto na formatação.
+
+Peço que dê uma atenção especial à coerência entre o que foi implementado, o que foi efetivamente testado e os resultados apresentados. Principalmente em relação ao treinamento contínuo, ao escalonamento com KEDA e aos testes de desempenho.
+
+Também identifiquei alguns pontos de formatação que precisam ser adequados ao modelo de artigo da UnC, incluindo a estrutura inicial, as palavras-chave, as tabelas, a apresentação do diagrama e as referências.
+
+O trabalho tem uma boa base técnica, mas precisamos corrigir essas questões para garantir maior rigor científico e deixar o artigo adequado para a apresentação e entrega definitiva.
+
+Faça os ajustes indicados nos comentários e me encaminhe novamente o arquivo em Word para a última conferência.
+
+Abraço!
