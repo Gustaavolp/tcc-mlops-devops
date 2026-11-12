@@ -77,3 +77,8 @@ output "nlb_target_group_arn" {
   description = "ARN do Target Group do NLB (para TargetGroupBinding)"
   value       = module.nlb.target_group_arn
 }
+
+output "api_health_endpoint_url" {
+  description = "URL do GET /health via API Gateway (usada nos testes de fumaça do CI/CD)"
+  value       = module.api_gateway.health_endpoint_url
+}

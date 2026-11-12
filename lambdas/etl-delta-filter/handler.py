@@ -140,7 +140,10 @@ def lambda_handler(event, context):
                 pa.scalar(training_start, type=dt_col.type)
             )
             table = table.filter(valid_mask)
-            dt_col = table[date_column].combine_chunks()
+            # Filtra também a coluna de datas já convertida para timestamp.
+            # (Reler table[date_column] devolvia a coluna original em texto e
+            # quebrava as comparações seguintes com ArrowTypeError.)
+            dt_col = dt_col.filter(valid_mask)
 
         # Se depois do filtro não sobrar nada, pula o batch
         if table.num_rows == 0:

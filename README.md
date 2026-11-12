@@ -70,8 +70,8 @@ A arquitetura foi desenhada para ser escalável, resiliente e observável, utili
   - **Amazon CloudWatch**: Centraliza métricas, alarmes e logs estruturados, garantindo rastreabilidade ponta a ponta com um `trace_id`.
 
 - **CI/CD & Infraestrutura como Código (IaC)**
-  - **Terraform 1.11**: Gerencia toda a infraestrutura AWS (15 módulos, 5 stacks de ambiente).
-  - **AWS CodeBuild**: Pipelines de CI/CD para automação operacional. O buildspec em [`buildspecs/iam-policy-setup.yaml`](buildspecs/iam-policy-setup.yaml) automatiza cleanup de IAM resources órfãos e configuração de policies nas roles EKS (DEV e STAGING).
+  - **Terraform 1.14**: Gerencia toda a infraestrutura AWS (15 módulos, 5 stacks de ambiente + stack `infra/cicd` dos pipelines).
+  - **AWS CodePipeline + CodeBuild**: 7 pipelines definidos como código ([`pipelines/`](pipelines/README.md) e [`infra/cicd/`](infra/cicd/)): um por artefato conteinerizado (análise estática, docker build, pytest na imagem, push no ECR com tag do commit, deploy em DEV, smoke test, aprovação e promoção da mesma imagem para Staging), um de infraestrutura (validate → plan → aprovação → apply, DEV e depois Staging). Permissões IAM das workloads são IaC (EKS Pod Identity) e mudam pelo pipeline de infraestrutura. Nova versão do modelo registrada → rolling restart automático da inferência.
 
 ---
 
@@ -97,8 +97,7 @@ A arquitetura foi desenhada para ser escalável, resiliente e observável, utili
 ├── agent_bedrock/          ← Agente AWS Bedrock: análise de métricas de fraude via GenAI
 ├── k8s/
 │   └── dev/                ← Manifestos Kubernetes: deployments, KEDA ScaledObject, HPA, PDB
-├── buildspecs/
-│   └── iam-policy-setup.yaml  ← CodeBuild: limpeza de IAM órfãos + setup de policies EKS
+├── pipelines/              ← Pipelines de CI/CD: buildspecs, scripts, artifacts.json e testes (ver pipelines/README.md)
 ├── glue/                   ← Jobs AWS Glue para ETL e feature engineering
 ├── preprocessing/          ← Módulo de pré-processamento e enriquecimento de dados
 ├── schemas/                ← JSON Schemas e contrato OpenAPI da API
@@ -136,7 +135,10 @@ Os documentos acadêmicos estão em [`docs/tcc/`](./docs/tcc/).
 
 | O que ver | Caminho |
 |-----------|---------|
-| Buildspec AWS CodeBuild (IAM setup EKS) | [`buildspecs/iam-policy-setup.yaml`](./buildspecs/iam-policy-setup.yaml) |
+| Visão geral dos pipelines | [`pipelines/README.md`](./pipelines/README.md) |
+| Pipelines como código (CodePipeline, CodeBuild, EventBridge) | [`infra/cicd/`](./infra/cicd/) |
+| Scripts e buildspecs | [`pipelines/scripts/`](./pipelines/scripts/), [`pipelines/buildspecs/`](./pipelines/buildspecs/) |
+| Testes unitários dos artefatos | `services/*/tests/`, `lambdas/*/tests/`, `models/sagemaker_training/tests/` |
 
 ### Objetivo 4 — Governança e Rastreamento (MLOps)
 
@@ -188,9 +190,9 @@ SLOs de referência e resultados obtidos nos testes de carga em staging (~100 RP
 
 | Camada | Tecnologia |
 |--------|-----------|
-| IaC | Terraform 1.11 |
+| IaC | Terraform 1.14 |
 | Orquestração | Amazon EKS 1.32 (Kubernetes) |
-| CI/CD | AWS CodeBuild + Amazon ECR |
+| CI/CD | AWS CodeCommit + EventBridge + CodePipeline + CodeBuild + Amazon ECR |
 | MLOps / Rastreamento | MLflow via SageMaker Managed Tracking Server |
 | Autoscaling | KEDA v2.18 (orientado a eventos — fila SQS FIFO) |
 | API de Inferência | FastAPI + Amazon API Gateway REST + NLB |

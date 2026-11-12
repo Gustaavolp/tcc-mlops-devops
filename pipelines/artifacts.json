@@ -1,0 +1,72 @@
+{
+  "_comment": "Fonte única dos artefatos conteinerizados. Lido por infra/cicd (um pipeline por chave) e por pipelines/scripts/run_local.sh. {env} é substituído por dev ou staging.",
+  "artifacts": {
+    "inference": {
+      "context_dir": "services/inference",
+      "lint_paths": "services/inference",
+      "test_dir": "services/inference/tests",
+      "test_workdir": "/app",
+      "test_deps": "pytest==8.3.5 httpx==0.28.1",
+      "deploy_kind": "eks",
+      "ecr_output": "ecr_inference_repository_url",
+      "k8s_deployment": "inference",
+      "manifest_dirs": ["k8s/{env}/inference"],
+      "watch_paths": ["services/inference", "k8s/dev/inference", "k8s/staging/inference"]
+    },
+    "process": {
+      "context_dir": "services/process",
+      "lint_paths": "services/process",
+      "test_dir": "services/process/tests",
+      "test_workdir": "/app",
+      "test_deps": "pytest==8.3.5",
+      "deploy_kind": "eks",
+      "ecr_output": "ecr_process_repository_url",
+      "k8s_deployment": "process",
+      "manifest_dirs": ["k8s/{env}/process", "k8s/{env}/keda"],
+      "watch_paths": ["services/process", "k8s/dev/process", "k8s/staging/process", "k8s/dev/keda", "k8s/staging/keda"]
+    },
+    "training-image": {
+      "context_dir": "models/sagemaker_training",
+      "lint_paths": "models/sagemaker_training",
+      "test_dir": "models/sagemaker_training/tests",
+      "test_workdir": "/opt/ml/code",
+      "test_deps": "pytest==8.3.5",
+      "deploy_kind": "training-image",
+      "ecr_output": "ecr_model_repository_url",
+      "watch_paths": ["models/sagemaker_training"]
+    },
+    "etl-delta-filter": {
+      "context_dir": "lambdas/etl-delta-filter",
+      "lint_paths": "lambdas/etl-delta-filter",
+      "test_dir": "lambdas/etl-delta-filter/tests",
+      "test_workdir": "/var/task",
+      "test_deps": "pytest==8.3.5",
+      "deploy_kind": "lambda",
+      "ecr_output": "ecr_etl_delta_filter_url",
+      "lambda_name": "etl-delta-filter",
+      "watch_paths": ["lambdas/etl-delta-filter"]
+    },
+    "training-launcher": {
+      "context_dir": "lambdas/training-launcher",
+      "lint_paths": "lambdas/training-launcher",
+      "test_dir": "lambdas/training-launcher/tests",
+      "test_workdir": "/var/task",
+      "test_deps": "pytest==8.3.5",
+      "deploy_kind": "lambda",
+      "ecr_output": "ecr_training_launcher_url",
+      "lambda_name": "training-launcher",
+      "watch_paths": ["lambdas/training-launcher"]
+    },
+    "register-best-model": {
+      "context_dir": "lambdas/register-best-model",
+      "lint_paths": "lambdas/register-best-model",
+      "test_dir": "lambdas/register-best-model/tests",
+      "test_workdir": "/var/task",
+      "test_deps": "pytest==8.3.5",
+      "deploy_kind": "lambda",
+      "ecr_output": "ecr_register_best_model_url",
+      "lambda_name": "register-best-model",
+      "watch_paths": ["lambdas/register-best-model"]
+    }
+  }
+}

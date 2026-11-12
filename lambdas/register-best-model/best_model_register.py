@@ -3,6 +3,7 @@ import json
 import mlflow
 import logging
 
+import boto3
 from mlflow.tracking import MlflowClient
 from mlflow.exceptions import MlflowException
 
@@ -32,6 +33,40 @@ class MlflowModelRegistry:
         os.environ["MLFLOW_HTTP_REQUEST_MAX_RETRIES"] = "3"
         os.environ["MLFLOW_HTTP_REQUEST_TIMEOUT"] = "20"
         os.environ["MLFLOW_ENABLE_SYSTEM_METRICS_LOGGING"] = "false"
+
+    def publish_promotion_event(self, version, run_id, metric):
+        """
+        Publica no EventBridge o evento de nova versão registrada, que dispara o
+        rolling restart do serviço de inferência no mesmo ambiente.
+        Falhas aqui não desfazem o registro: são logadas e retornam False.
+        """
+        if not Envs.PUBLISH_PROMOTION_EVENT:
+            return False
+
+        detail = {
+            "model_name": self.MODEL_NAME,
+            "version": str(version) if version is not None else None,
+            "run_id": run_id,
+            "metric": self.METRIC_TO_COMPARE,
+            "metric_value": float(metric) if metric is not None else None,
+            "environment": Envs.ENVIRONMENT
+        }
+
+        try:
+            response = boto3.client("events").put_events(Entries = [{
+                "Source": Envs.PROMOTION_EVENT_SOURCE,
+                "DetailType": "ModelVersionRegistered",
+                "Detail": json.dumps(detail),
+                "EventBusName": Envs.PROMOTION_EVENT_BUS
+            }])
+            if response.get("FailedEntryCount", 0):
+                logging.error(f"Evento de promoção rejeitado: {response.get('Entries')}")
+                return False
+            logging.info(f"Evento de promoção publicado: {detail}")
+            return True
+        except Exception as e:
+            logging.error(f"Falha ao publicar evento de promoção: {e}")
+            return False
 
     @Utils.log_errors
     def register_best_model(self):
@@ -142,14 +177,24 @@ class MlflowModelRegistry:
 
                 model_uri = f"runs:/{candidate_run_id}/{self.MLFLOW_BEST_MODEL_RUN}"
 
-                mlflow.register_model(
+                model_version = mlflow.register_model(
                     model_uri = model_uri,
                     name = self.MODEL_NAME
                 )
 
+                event_published = self.publish_promotion_event(
+                    version = getattr(model_version, "version", None),
+                    run_id = candidate_run_id,
+                    metric = candidate_metric
+                )
+
                 return {
                     "statusCode": 200,
-                    "body": json.dumps({"message": "Model registered successfully."})
+                    "body": json.dumps({
+                        "message": "Model registered successfully.",
+                        "version": str(getattr(model_version, "version", "")),
+                        "event_published": event_published
+                    })
                 }
 
             except Exception as e:

@@ -1,0 +1,20 @@
+# Pipeline de infraestrutura. Variáveis: TF_ACTION (validate|plan|apply), TF_ENV (dev|staging),
+# PLAN_ARTIFACT (no apply: nome do artefato de entrada gerado pelo plan).
+version: 0.2
+phases:
+  install:
+    commands:
+      - bash pipelines/scripts/install_tools.sh terraform
+  build:
+    commands:
+      - mkdir -p plans && touch plans/.keep
+      - |
+        if [ "$TF_ACTION" = "apply" ]; then
+          export PLAN_INPUT_DIR="$(printenv "CODEBUILD_SRC_DIR_${PLAN_ARTIFACT}")"
+        fi
+      - bash pipelines/scripts/tf_stacks.sh "$TF_ACTION" ${TF_ENV:-}
+artifacts:
+  # Usado apenas pela ação de plan (as demais ações não declaram artefato de saída).
+  base-directory: plans
+  files:
+    - '**/*'

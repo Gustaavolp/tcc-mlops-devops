@@ -1,6 +1,7 @@
 import os
 import logging
 
+import boto3
 from sagemaker.modules.train import ModelTrainer
 from sagemaker.modules.configs import Compute
 from sagemaker.modules.configs import StoppingCondition
@@ -22,6 +23,10 @@ MLFLOW_URI = os.environ.get("MLFLOW_URI")
 MLFLOW_EXPERIMENT_NAME = os.environ.get("MLFLOW_EXPERIMENT_NAME", "classificacao_6.0.0")
 SAGEMAKER_ROLE = os.environ.get("SAGEMAKER_ROLE")
 TRAINING_IMAGE = os.environ.get("TRAINING_IMAGE")
+# Parâmetro SSM com a imagem de treino vigente. O pipeline de CI/CD da imagem de
+# treinamento atualiza esse parâmetro com a tag imutável do commit; se ausente,
+# usa TRAINING_IMAGE (compatibilidade).
+TRAINING_IMAGE_PARAM = os.environ.get("TRAINING_IMAGE_PARAM")
 DATA_S3_PATH = os.environ.get("DATA_S3_PATH")
 DATASET_NAME = os.environ.get("DATASET_NAME", "gold")
 IS_PROD = os.environ.get("IS_PROD", "False")
@@ -62,11 +67,27 @@ imbalances = [
 
 
 # ---------------------------
+# Imagem de treino
+# ---------------------------
+def resolve_training_image():
+    """Retorna a imagem de treino: parâmetro SSM (se configurado) ou TRAINING_IMAGE."""
+    if TRAINING_IMAGE_PARAM:
+        ssm = boto3.client("ssm")
+        value = ssm.get_parameter(Name=TRAINING_IMAGE_PARAM)["Parameter"]["Value"]
+        logger.info("Imagem de treino (SSM %s): %s", TRAINING_IMAGE_PARAM, value)
+        return value
+    if not TRAINING_IMAGE:
+        raise ValueError("Defina TRAINING_IMAGE_PARAM ou TRAINING_IMAGE")
+    return TRAINING_IMAGE
+
+
+# ---------------------------
 # Lambda handler
 # ---------------------------
 def lambda_handler(event, context):
     logger.info("Training launcher invoked")
 
+    training_image = resolve_training_image()
     jobs_launched = []
 
     for model_name, imputer_name, reduction_name, imbalance_name in product(models, imputers, reducoes, imbalances):
@@ -87,7 +108,7 @@ def lambda_handler(event, context):
 
         model_trainer = ModelTrainer(
             role=SAGEMAKER_ROLE,
-            training_image=TRAINING_IMAGE,
+            training_image=training_image,
             hyperparameters=hyperparameters,
             stopping_condition=StoppingCondition(
                 max_runtime_in_seconds=3600 * 72,

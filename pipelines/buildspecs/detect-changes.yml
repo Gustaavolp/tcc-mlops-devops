@@ -1,0 +1,7 @@
+# Primeira ação de todo pipeline: encerra a execução se o artefato não mudou.
+# Variáveis (da ação no CodePipeline): ARTIFACT, WATCH_PATHS, PIPELINE_NAME, PIPELINE_EXECUTION_ID
+version: 0.2
+phases:
+  build:
+    commands:
+      - bash pipelines/scripts/detect_changes.sh

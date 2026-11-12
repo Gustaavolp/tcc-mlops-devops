@@ -104,8 +104,10 @@ module "ecr" {
   # Scanning
   enable_image_scanning = true
 
-  # Mutability (MUTABLE em staging para facilitar desenvolvimento)
-  image_tag_mutability = "MUTABLE"
+  # Tags imutáveis (tag = commit, publicada pelo CI/CD); "latest" fica mutável
+  # apenas para o bootstrap inicial dos manifestos e das Lambdas.
+  image_tag_mutability                   = "IMMUTABLE_WITH_EXCLUSION"
+  image_tag_mutability_exclusion_filters = ["latest"]
 
   # Lifecycle
   max_image_count               = 30 # Manter últimas 30 imagens

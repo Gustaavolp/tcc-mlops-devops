@@ -1,0 +1,16 @@
+# Análise estática executada pelos pipelines de aplicação (pipelines/scripts/build_test_push.sh).
+#
+# O pipeline bloqueia apenas erros que quebram o código em execução, o conjunto
+# clássico de "erros fatais" do flake8:
+#   E9   erros de sintaxe / de leitura do arquivo
+#   F63  comparações inválidas (ex.: `is` com literal)
+#   F7   erros de instrução (ex.: `return` fora de função, `break` fora de laço)
+#   F82  nomes indefinidos
+# Regras de estilo (imports não usados, except genérico etc.) podem ser vistas com
+#   ruff check --select E,F,W .
+# e não bloqueiam a implantação.
+target-version = "py39"
+extend-exclude = ["notebooks", "*.ipynb"]
+
+[lint]
+select = ["E9", "F63", "F7", "F82"]

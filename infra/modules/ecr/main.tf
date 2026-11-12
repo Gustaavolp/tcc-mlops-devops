@@ -25,6 +25,16 @@ resource "aws_ecr_repository" "inference" {
   name                 = var.inference_repo_name
   image_tag_mutability = var.image_tag_mutability
 
+  # Tags imutáveis, exceto as que casarem com os filtros (ex.: "latest", usada
+  # apenas no bootstrap). As imagens do CI/CD usam a tag do commit.
+  dynamic "image_tag_mutability_exclusion_filter" {
+    for_each = var.image_tag_mutability_exclusion_filters
+    content {
+      filter      = image_tag_mutability_exclusion_filter.value
+      filter_type = "WILDCARD"
+    }
+  }
+
   image_scanning_configuration {
     scan_on_push = var.enable_image_scanning
   }
@@ -80,6 +90,16 @@ resource "aws_ecr_repository" "process" {
   name                 = var.process_repo_name
   image_tag_mutability = var.image_tag_mutability
 
+  # Tags imutáveis, exceto as que casarem com os filtros (ex.: "latest", usada
+  # apenas no bootstrap). As imagens do CI/CD usam a tag do commit.
+  dynamic "image_tag_mutability_exclusion_filter" {
+    for_each = var.image_tag_mutability_exclusion_filters
+    content {
+      filter      = image_tag_mutability_exclusion_filter.value
+      filter_type = "WILDCARD"
+    }
+  }
+
   image_scanning_configuration {
     scan_on_push = var.enable_image_scanning
   }
@@ -134,6 +154,16 @@ resource "aws_ecr_lifecycle_policy" "process" {
 resource "aws_ecr_repository" "model" {
   name                 = var.model_repo_name
   image_tag_mutability = var.image_tag_mutability
+
+  # Tags imutáveis, exceto as que casarem com os filtros (ex.: "latest", usada
+  # apenas no bootstrap). As imagens do CI/CD usam a tag do commit.
+  dynamic "image_tag_mutability_exclusion_filter" {
+    for_each = var.image_tag_mutability_exclusion_filters
+    content {
+      filter      = image_tag_mutability_exclusion_filter.value
+      filter_type = "WILDCARD"
+    }
+  }
 
   image_scanning_configuration {
     scan_on_push = var.enable_image_scanning
@@ -193,6 +223,16 @@ resource "aws_ecr_repository" "best_model_register" {
   name                 = var.best_model_register_repo_name
   image_tag_mutability = var.image_tag_mutability
 
+  # Tags imutáveis, exceto as que casarem com os filtros (ex.: "latest", usada
+  # apenas no bootstrap). As imagens do CI/CD usam a tag do commit.
+  dynamic "image_tag_mutability_exclusion_filter" {
+    for_each = var.image_tag_mutability_exclusion_filters
+    content {
+      filter      = image_tag_mutability_exclusion_filter.value
+      filter_type = "WILDCARD"
+    }
+  }
+
   image_scanning_configuration {
     scan_on_push = var.enable_image_scanning
   }
@@ -251,6 +291,16 @@ resource "aws_ecr_repository" "etl_delta_filter" {
   name                 = var.etl_delta_filter_repo_name
   image_tag_mutability = var.image_tag_mutability
 
+  # Tags imutáveis, exceto as que casarem com os filtros (ex.: "latest", usada
+  # apenas no bootstrap). As imagens do CI/CD usam a tag do commit.
+  dynamic "image_tag_mutability_exclusion_filter" {
+    for_each = var.image_tag_mutability_exclusion_filters
+    content {
+      filter      = image_tag_mutability_exclusion_filter.value
+      filter_type = "WILDCARD"
+    }
+  }
+
   image_scanning_configuration {
     scan_on_push = var.enable_image_scanning
   }
@@ -308,6 +358,16 @@ resource "aws_ecr_lifecycle_policy" "etl_delta_filter" {
 resource "aws_ecr_repository" "training_launcher" {
   name                 = var.training_launcher_repo_name
   image_tag_mutability = var.image_tag_mutability
+
+  # Tags imutáveis, exceto as que casarem com os filtros (ex.: "latest", usada
+  # apenas no bootstrap). As imagens do CI/CD usam a tag do commit.
+  dynamic "image_tag_mutability_exclusion_filter" {
+    for_each = var.image_tag_mutability_exclusion_filters
+    content {
+      filter      = image_tag_mutability_exclusion_filter.value
+      filter_type = "WILDCARD"
+    }
+  }
 
   image_scanning_configuration {
     scan_on_push = var.enable_image_scanning

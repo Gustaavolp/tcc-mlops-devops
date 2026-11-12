@@ -17,13 +17,24 @@ variable "enable_image_scanning" {
 }
 
 variable "image_tag_mutability" {
-  description = "Permitir sobrescrever tags de imagem (MUTABLE ou IMMUTABLE)"
+  description = "Permitir sobrescrever tags de imagem (MUTABLE, IMMUTABLE ou *_WITH_EXCLUSION)"
   type        = string
   default     = "MUTABLE"
 
   validation {
-    condition     = contains(["MUTABLE", "IMMUTABLE"], var.image_tag_mutability)
-    error_message = "image_tag_mutability deve ser MUTABLE ou IMMUTABLE"
+    condition     = contains(["MUTABLE", "IMMUTABLE", "MUTABLE_WITH_EXCLUSION", "IMMUTABLE_WITH_EXCLUSION"], var.image_tag_mutability)
+    error_message = "image_tag_mutability deve ser MUTABLE, IMMUTABLE, MUTABLE_WITH_EXCLUSION ou IMMUTABLE_WITH_EXCLUSION"
+  }
+}
+
+variable "image_tag_mutability_exclusion_filters" {
+  description = "Filtros (wildcard) de tags que escapam da regra de mutabilidade; usado com *_WITH_EXCLUSION (máx. 5)"
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = length(var.image_tag_mutability_exclusion_filters) <= 5
+    error_message = "No máximo 5 filtros de exclusão."
   }
 }
 

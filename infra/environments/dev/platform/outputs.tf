@@ -58,3 +58,18 @@ output "ecr_training_launcher_url" {
   description = "URL do repositorio ECR para Lambda training-launcher"
   value       = module.ecr.training_launcher_repository_url
 }
+
+output "ecr_inference_repository_url" {
+  description = "URL do repositorio ECR de inference"
+  value       = module.ecr.inference_repository_url
+}
+
+output "ecr_process_repository_url" {
+  description = "URL do repositorio ECR de process"
+  value       = module.ecr.process_repository_url
+}
+
+output "api_health_endpoint_url" {
+  description = "URL do GET /health via API Gateway (usada nos testes de fumaça do CI/CD)"
+  value       = module.api_gateway.health_endpoint_url
+}

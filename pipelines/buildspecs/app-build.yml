@@ -1,0 +1,13 @@
+# Análise estática -> docker build -> pytest dentro da imagem -> push no ECR (tag = commit).
+# Variáveis: ARTIFACT, CONTEXT_DIR, LINT_PATHS, TEST_DIR, TEST_WORKDIR, TEST_DEPS,
+#            ECR_REPO_URL, IMAGE_TAG
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      python: 3.12
+    commands:
+      - bash pipelines/scripts/install_tools.sh ruff
+  build:
+    commands:
+      - bash pipelines/scripts/build_test_push.sh

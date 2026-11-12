@@ -51,6 +51,12 @@ module "lambda_register_best_model" {
     MLFLOW_BEST_MODEL_RUN = var.lambda_register_best_model_best_model_run
     MLFLOW_TARGET_TAG_KEY = var.lambda_register_best_model_target_tag_key
     MLFLOW_TARGET_TAG     = var.lambda_register_best_model_target_tag
+
+    # Evento de nova versão registrada -> rolling restart da inferência (stack infra/cicd)
+    ENVIRONMENT             = var.environment
+    PROMOTION_EVENT_SOURCE  = "elo-fraud.mlops"
+    PROMOTION_EVENT_BUS     = "default"
+    PUBLISH_PROMOTION_EVENT = "true"
   }
 
   # IAM (AWS Managed Policies - SCP bloqueia custom policies)
@@ -58,6 +64,16 @@ module "lambda_register_best_model" {
     "arn:aws:iam::aws:policy/AmazonSageMakerFullAccess",
     "arn:aws:iam::aws:policy/AmazonS3FullAccess",
   ]
+
+  # Publicação do evento de nova versão registrada
+  inline_policy_json = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["events:PutEvents"]
+      Resource = "arn:aws:events:${var.aws_region}:${data.aws_caller_identity.current.account_id}:event-bus/default"
+    }]
+  })
 
   # S3 Trigger - SageMaker Bucket
   # Bucket criado automaticamente pelo SageMaker: sagemaker-{region}-{account_id}
@@ -137,7 +153,8 @@ module "lambda_training_launcher" {
     MLFLOW_URI             = var.mlflow_tracking_uri
     MLFLOW_EXPERIMENT_NAME = var.lambda_training_launcher_experiment_name
     SAGEMAKER_ROLE         = local.mlflow_execution_role_arn
-    TRAINING_IMAGE         = "${local.ecr_model_url}:latest"
+    TRAINING_IMAGE         = "${local.ecr_model_url}:latest" # fallback
+    TRAINING_IMAGE_PARAM   = aws_ssm_parameter.training_image.name
     DATA_S3_PATH           = "s3://${local.s3_processed_bucket_id}/${var.s3_prefix_training_zone}/"
     DATASET_NAME           = var.lambda_training_launcher_dataset_name
     IS_PROD                = var.environment == "prod" ? "True" : "False"
@@ -147,6 +164,16 @@ module "lambda_training_launcher" {
   managed_policy_arns = [
     "arn:aws:iam::aws:policy/AmazonSageMakerFullAccess",
   ]
+
+  # Leitura do parâmetro com a imagem de treino vigente (atualizado pelo CI/CD)
+  inline_policy_json = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["ssm:GetParameter"]
+      Resource = aws_ssm_parameter.training_image.arn
+    }]
+  })
 
   # S3 trigger gerenciado fora do modulo (bucket compartilhado com etl-delta-filter)
   enable_s3_trigger = false
@@ -224,3 +251,24 @@ resource "aws_lambda_permission" "etl_delta_filter_eventbridge" {
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.glue_job_succeeded.arn
 }
+
+
+# =============================================================================
+# Imagem de treino vigente (lida pela training-launcher)
+# =============================================================================
+# O pipeline de CI/CD da imagem de treinamento atualiza o valor com a tag
+# imutável do commit; o Terraform só cria o parâmetro e não reverte o valor.
+# =============================================================================
+
+resource "aws_ssm_parameter" "training_image" {
+  name        = "/${var.project_name}/${var.environment}/training-image"
+  description = "Imagem do SageMaker Training Job usada pela training-launcher"
+  type        = "String"
+  value       = "${local.ecr_model_url}:latest"
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+}
+
+data "aws_caller_identity" "current" {}

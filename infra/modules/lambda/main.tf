@@ -44,6 +44,14 @@ resource "aws_iam_role_policy_attachment" "managed_policies" {
   policy_arn = var.managed_policy_arns[count.index]
 }
 
+resource "aws_iam_role_policy" "inline" {
+  count = var.inline_policy_json == null ? 0 : 1
+
+  name   = "${var.function_name}-inline"
+  role   = aws_iam_role.lambda.id
+  policy = var.inline_policy_json
+}
+
 # -----------------------------------------------------------------------------
 # CloudWatch Log Group
 # -----------------------------------------------------------------------------

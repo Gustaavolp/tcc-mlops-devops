@@ -1,0 +1,7 @@
+# Última ação: registra o commit como promovido (base da detecção de mudanças).
+# Variáveis: ARTIFACT
+version: 0.2
+phases:
+  build:
+    commands:
+      - bash pipelines/scripts/record_commit.sh

@@ -1,0 +1,28 @@
+# Ativação de nova versão do modelo: rolling restart do Deployment de inferência.
+# Acionado por EventBridge quando a register-best-model registra uma nova versão
+# (evento elo-fraud.mlops / ModelVersionRegistered). Projeto sem código-fonte:
+# este buildspec é embutido no projeto CodeBuild pela stack infra/cicd.
+# Variáveis: TARGET_ENV, EKS_CLUSTER, K8S_NAMESPACE, K8S_DEPLOYMENT, HEALTH_URL, MODEL_VERSION
+version: 0.2
+env:
+  variables:
+    KUBECTL_VERSION: v1.32.13   # manter igual a pipelines/scripts/install_tools.sh
+    KUBECTL_SHA256: db2ae479a63f3665d7f704ab18c0d4d4050144237980763221835b7305703c4c
+phases:
+  install:
+    commands:
+      - curl -fsSLo /usr/local/bin/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+      - echo "${KUBECTL_SHA256}  /usr/local/bin/kubectl" | sha256sum -c -
+      - chmod 0755 /usr/local/bin/kubectl
+  build:
+    commands:
+      - echo "Ativando modelo versão ${MODEL_VERSION:-?} em ${TARGET_ENV}"
+      - aws eks update-kubeconfig --name "$EKS_CLUSTER" --region "$AWS_REGION"
+      - kubectl rollout restart "deployment/$K8S_DEPLOYMENT" -n "$K8S_NAMESPACE"
+      - kubectl rollout status "deployment/$K8S_DEPLOYMENT" -n "$K8S_NAMESPACE" --timeout=15m
+      - |
+        for i in $(seq 1 12); do
+          if curl -fsS --max-time 10 "$HEALTH_URL" | grep -q '"healthy"'; then echo "API saudável"; exit 0; fi
+          echo "tentativa $i: API ainda indisponível"; sleep 10
+        done
+        echo "API não respondeu saudável após o rollout"; exit 1

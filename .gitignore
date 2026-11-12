@@ -52,7 +52,7 @@ htmlcov/
 *.tfstate.*
 *.tfstate.backup
 .terraform/
-.terraform.lock.hcl
+# .terraform.lock.hcl é versionado (recomendação HashiCorp): o CI usa -lockfile=readonly
 .terraform.tfstate.lock.info
 .terraform-version.lock
 crash.log

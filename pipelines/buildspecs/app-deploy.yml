@@ -1,0 +1,12 @@
+# Implantação em um ambiente + testes de fumaça (+ registro do commit no último ambiente).
+# Variáveis: ver pipelines/scripts/deploy.sh e smoke_test.sh; RECORD_COMMIT=1 na promoção final.
+version: 0.2
+phases:
+  install:
+    commands:
+      - bash pipelines/scripts/install_tools.sh kubectl crane
+  build:
+    commands:
+      - bash pipelines/scripts/deploy.sh
+      - bash pipelines/scripts/smoke_test.sh
+      - if [ "${RECORD_COMMIT:-0}" = "1" ]; then bash pipelines/scripts/record_commit.sh; fi

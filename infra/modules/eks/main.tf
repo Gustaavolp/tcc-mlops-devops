@@ -144,7 +144,7 @@ module "eks" {
       # foram REMOVIDAS — agora gerenciadas por Pod Identity com least-privilege por workload.
       # Ver pod-identity.tf na stack platform de cada ambiente.
       iam_role_additional_policies = {
-        CloudWatchFullAccess        = "arn:aws:iam::aws:policy/CloudWatchFullAccess"
+        CloudWatchFullAccess         = "arn:aws:iam::aws:policy/CloudWatchFullAccess"
         AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
       }
 

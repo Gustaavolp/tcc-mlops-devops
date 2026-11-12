@@ -65,6 +65,12 @@ variable "managed_policy_arns" {
   default     = []
 }
 
+variable "inline_policy_json" {
+  description = "Política IAM inline adicional (JSON) com permissões específicas da função; null para nenhuma"
+  type        = string
+  default     = null
+}
+
 # -----------------------------------------------------------------------------
 # S3 Trigger
 # -----------------------------------------------------------------------------
